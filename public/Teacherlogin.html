@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Portal | AI Learning Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
+  html, body { height:100%; width:100%; }
+  body { display:flex; justify-content:center; align-items:center; background: linear-gradient(to bottom, #4a90e2 0%, #6fb3f2 50%, #cce7ff 100%); }
+
+  .container {
+    width: 60%;
+    max-width: 500px;
+    min-height: 50vh;
+    background: rgba(255,255,255,0.95);
+    padding: 40px 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+
+  h2 { font-size:24px; color:#012f5f; margin-bottom:20px; }
+
+  .form-box { display:flex; flex-direction:column; gap:12px; }
+  .form-box input { width:100%; padding:12px; border:1px solid #90caf9; border-radius:10px; font-size:15px; outline:none; transition:0.3s; }
+  .form-box input:focus { border-color:#01579b; box-shadow:0 0 6px rgba(1,87,155,0.5); }
+  .form-box button { width:100%; padding:12px; background: linear-gradient(to right,#0288d1,#01579b); color:white; border:none; border-radius:10px; font-size:16px; cursor:pointer; transition:0.3s; }
+  .form-box button:hover { transform:scale(1.02); background: linear-gradient(to right,#764ba2,#667eea); }
+  .switch-link { margin-top:12px; font-size:15px; color:#01579b; cursor:pointer; text-decoration:underline; }
+
+  section { display:none; }
+  section.active { display:block; }
+
+  .welcome { display:flex; flex-direction:column; align-items:center; gap:20px; }
+  .welcome h1 { font-size:2rem; color:#012f5f; margin-bottom:12px; }
+  .welcome p { font-size:1rem; color:#012f5f; }
+  .home-box { background:#66a6ff; padding:20px 25px; border-radius:12px; color:white; font-size:1.2rem; cursor:pointer; transition:0.3s; }
+  .home-box:hover { background:#89f7fe; color:#333; transform:scale(1.03); }
+
+  @media(max-width:768px){
+    .container { width: 90%; padding: 30px 15px; }
+    h2, .welcome h1 { font-size:20px; }
+    .form-box input, .form-box button { padding:10px; font-size:14px; }
+    .home-box { font-size:1rem; padding:15px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Registration / Login -->
+  <section id="login" class="active">
+    <h2>Teacher Registration / Login</h2>
+    <form class="form-box" id="newTeacherForm">
+      <input type="text" id="teacherName" placeholder="Full Name" required>
+      <input type="email" id="teacherEmail" placeholder="Email" required>
+      <input type="tel" id="teacherMobile" placeholder="Mobile Number" required pattern="[0-9]{10}">
+      <button type="submit">Register</button>
+      <div class="switch-link" id="switchToLogin">Already registered? Login here</div>
+    </form>
+    <form class="form-box" id="existingTeacherForm" style="display:none;">
+      <input type="email" id="loginEmail" placeholder="Email" required>
+      <input type="password" id="loginPassword" placeholder="Password" required>
+      <button type="submit">Login</button>
+      <div class="switch-link" id="switchToRegister">New teacher? Register here</div>
+    </form>
+  </section>
+
+  <!-- OTP Verification -->
+  <section id="otpVerify">
+    <h2>Verify Your Account</h2>
+    <form class="form-box" id="otpForm">
+      <p>Enter the 6-digit code sent to your mobile.</p>
+      <input type="text" id="otpInput" placeholder="OTP" maxlength="6" required pattern="[0-9]{6}">
+      <button type="submit">Verify</button>
+      <div class="switch-link" id="resendOtp">Resend Code</div>
+    </form>
+  </section>
+
+  <!-- Create Password -->
+  <section id="createPassword">
+    <h2>Create Password</h2>
+    <form class="form-box" id="passwordForm">
+      <input type="password" id="password" placeholder="Create Password" required minlength="6">
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" required minlength="6">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:10px;">
+        <button type="submit">Save Password</button>
+        <button type="button" id="dontSave">Don't Save</button>
+        <button type="button" id="notNow">Not Now</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Welcome Page -->
+  <section id="welcome">
+    <div class="welcome">
+      <h1>Welcome, <span id="teacherWelcome"></span>!</h1>
+      <p>Click below to go to your Dashboard.</p>
+      <div class="home-box" id="homeBox">Go to Dashboard</div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const newTeacherForm = document.getElementById('newTeacherForm');
+  const existingTeacherForm = document.getElementById('existingTeacherForm');
+  const otpForm = document.getElementById('otpForm');
+  const passwordForm = document.getElementById('passwordForm');
+
+  const loginSection = document.getElementById('login');
+  const otpSection = document.getElementById('otpVerify');
+  const passwordSection = document.getElementById('createPassword');
+  const welcomeSection = document.getElementById('welcome');
+  const teacherWelcome = document.getElementById('teacherWelcome');
+  const homeBox = document.getElementById('homeBox');
+
+  let generatedOTP = "";
+  let teacherNameValue = "";
+
+  // Switch Register/Login
+  document.getElementById('switchToLogin').onclick = () => { newTeacherForm.style.display='none'; existingTeacherForm.style.display='block'; };
+  document.getElementById('switchToRegister').onclick = () => { existingTeacherForm.style.display='none'; newTeacherForm.style.display='block'; };
+
+  function generateOTP() {
+    generatedOTP = Math.floor(100000 + Math.random()*900000).toString();
+    alert("OTP: "+generatedOTP+" (demo only)");
+  }
+
+  function showWelcome() {
+    loginSection.classList.remove('active');
+    otpSection.classList.remove('active');
+    passwordSection.classList.remove('active');
+    welcomeSection.classList.add('active');
+    teacherWelcome.textContent = teacherNameValue;
+  }
+
+  newTeacherForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    teacherNameValue = document.getElementById('teacherName').value;
+    localStorage.setItem("teacherName", teacherNameValue);
+    generateOTP();
+    loginSection.classList.remove('active');
+    otpSection.classList.add('active');
+  });
+
+  otpForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    if(document.getElementById('otpInput').value === generatedOTP){
+      alert("OTP Verified! Create your password.");
+      otpSection.classList.remove('active');
+      passwordSection.classList.add('active');
+    } else { alert("Invalid OTP!"); }
+  });
+
+  passwordForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    const pw = document.getElementById('password').value;
+    const cpw = document.getElementById('confirmPassword').value;
+    if(pw!==cpw){ return alert("Passwords do not match!"); }
+    alert("Password saved! Redirecting...");
+    showWelcome();
+  });
+
+  document.getElementById('dontSave').onclick = () => { alert("Password not saved."); showWelcome(); };
+  document.getElementById('notNow').onclick = () => { alert("Password setup postponed."); showWelcome(); };
+
+  existingTeacherForm.addEventListener('submit', e=>{
+    e.preventDefault();
+    teacherNameValue = "Teacher";
+    localStorage.setItem("teacherName", teacherNameValue);
+    alert("Login successful! Redirecting...");
+    window.location.href = "dashboard.html";
+  });
+
+  document.getElementById('resendOtp').onclick = () => { generateOTP(); alert("New OTP sent! (demo)"); };
+
+  // ✅ "Go to Dashboard" button redirect
+  homeBox.onclick = () => {
+    alert("Redirecting to your Dashboard...");
+    window.location.href = "dashboard.html";
+  };
+</script>
+</body>
+</html>

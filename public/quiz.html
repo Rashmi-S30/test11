@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Quiz Generator — Smart Study</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1a1c2e, #141727);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      width: 400px;
+      text-align: center;
+      backdrop-filter: blur(12px);
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    button {
+      background: #6366f1;
+      border: none;
+      padding: 12px 20px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: 600;
+      font-size: 15px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #4f46e5;
+    }
+
+    .quiz-container {
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .quiz-question {
+      background: rgba(255, 255, 255, 0.12);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .back-btn {
+      margin-top: 15px;
+      display: inline-block;
+      background: #22c55e;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: white;
+      font-weight: 600;
+    }
+
+    .back-btn:hover {
+      background: #16a34a;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AI Quiz Generator</h1>
+
+    <label for="topic">Enter Topic</label>
+    <input type="text" id="topic" placeholder="e.g., Artificial Intelligence" />
+
+    <label for="count">Number of Questions</label>
+    <select id="count">
+      <option value="3">3</option>
+      <option value="5">5</option>
+      <option value="10">10</option>
+    </select>
+
+    <button onclick="generateQuiz()">Generate Quiz</button>
+
+    <div class="quiz-container" id="quizContainer"></div>
+
+    <a href="dashboard.html" class="back-btn">⬅ Go to Dashboard</a>
+  </div>
+
+  <script>
+    function generateQuiz() {
+      const topic = document.getElementById("topic").value.trim();
+      const count = parseInt(document.getElementById("count").value);
+      const quizContainer = document.getElementById("quizContainer");
+
+      quizContainer.innerHTML = "";
+
+      if (!topic) {
+        alert("Please enter a topic!");
+        return;
+      }
+
+      // Simulated quiz data (replace later with API if you want)
+      const sampleQuestions = [
+        {
+          q: `What is ${topic}?`,
+          a: ["A programming language", "A type of AI", "A hardware device", "None of these"]
+        },
+        {
+          q: `Which is true about ${topic}?`,
+          a: ["It helps automate tasks", "It only works offline", "It needs no data", "It’s a video game"]
+        },
+        {
+          q: `Who invented ${topic}?`,
+          a: ["Alan Turing", "Elon Musk", "Bill Gates", "Unknown"]
+        },
+        {
+          q: `${topic} is mainly used in which field?`,
+          a: ["Healthcare", "Education", "Robotics", "All of the above"]
+        },
+        {
+          q: `What does ${topic} rely on?`,
+          a: ["Data", "Luck", "Magic", "Manual work"]
+        }
+      ];
+
+      const selected = sampleQuestions.slice(0, count);
+
+      selected.forEach((qObj, i) => {
+        const div = document.createElement("div");
+        div.className = "quiz-question";
+        div.innerHTML = `
+          <h3>Q${i + 1}. ${qObj.q}</h3>
+          <ul>
+            ${qObj.a.map(a => `<li>• ${a}</li>`).join("")}
+          </ul>
+        `;
+        quizContainer.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>

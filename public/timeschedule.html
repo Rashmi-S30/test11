@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AI Smart Study Scheduler</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --accent: #06b6d4;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    h1 { color: var(--accent); margin-bottom: 20px; }
+    .container {
+      background: var(--card);
+      padding: 25px;
+      border-radius: 15px;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 5px;
+      background: #334155;
+      color: white;
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      margin-top: 15px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { background: #0891b2; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 10px; border-bottom: 1px solid #334155; text-align: left; }
+    th { background: #0f172a; color: var(--accent); }
+    .progress-container {
+      width: 100%;
+      background: #334155;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+      margin-top: 10px;
+    }
+    .progress-bar {
+      background: var(--success);
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s;
+    }
+    #chartContainer {
+      margin-top: 25px;
+      background: #1e293b;
+      border-radius: 15px;
+      padding: 15px;
+    }
+    #motivationalPopup {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #1e293b;
+      border-left: 6px solid var(--accent);
+      border-radius: 10px;
+      padding: 15px;
+      display: none;
+      max-width: 260px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    #motivationalPopup button {
+      background: none;
+      border: none;
+      color: white;
+      float: right;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .subject-container { margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h1>🤖 AI Smart Study Scheduler</h1>
+
+  <div class="container">
+    <h3>📘 Student Details</h3>
+
+    <label>Name:</label>
+    <input type="text" id="name" placeholder="Enter your name">
+
+    <label>Class / Grade:</label>
+    <input type="text" id="class" placeholder="Enter class or grade">
+
+    <label>Goal (e.g. Exam Name, Skill, etc.):</label>
+    <input type="text" id="goal" placeholder="E.g. Final Exams, JEE, etc.">
+
+    <div id="subjects" class="subject-container">
+      <h4>Subjects</h4>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" placeholder="Subject Name" class="subName" style="flex:2;">
+        <select class="priority" style="flex:1;">
+          <option value="1">Low</option>
+          <option value="2">Medium</option>
+          <option value="3">High</option>
+        </select>
+      </div>
+    </div>
+
+    <button onclick="addSubject()">➕ Add Subject</button>
+    <button onclick="generateSchedule()">⚡ Generate AI Schedule</button>
+
+    <div id="scheduleArea" style="margin-top:20px;"></div>
+
+    <div id="progressContainer" style="display:none;margin-top:20px;">
+      <h4>Progress Tracker</h4>
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <p id="progressText" style="margin-top:5px;">0% Completed</p>
+    </div>
+
+    <div id="chartContainer" style="display:none;">
+      <canvas id="studyChart"></canvas>
+    </div>
+
+    <button onclick="triggerMindRefresh()" style="margin-top:20px;background:#3b82f6;">✨ Mind Refresh</button>
+
+  </div>
+
+  <div id="motivationalPopup">
+    <button onclick="closePopup()">✖</button>
+    <p id="quoteText">Stay motivated!</p>
+  </div>
+
+  <script>
+    let subjects = [], completedSessions = 0, totalSessions = 0, chartInstance;
+
+    function addSubject() {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+          <input type="text" placeholder="Subject Name" class="subName" style="flex:2;">
+          <select class="priority" style="flex:1;">
+            <option value="1">Low</option>
+            <option value="2">Medium</option>
+            <option value="3">High</option>
+          </select>
+        </div>`;
+      document.getElementById("subjects").appendChild(div);
+    }
+
+    function generateSchedule() {
+      const name = document.getElementById("name").value.trim();
+      const className = document.getElementById("class").value.trim();
+      const goal = document.getElementById("goal").value.trim();
+      const subjectInputs = document.querySelectorAll(".subName");
+      const priorityInputs = document.querySelectorAll(".priority");
+
+      subjects = Array.from(subjectInputs).map((i, idx) => ({
+        name: i.value.trim(),
+        priority: parseInt(priorityInputs[idx].value)
+      })).filter(s => s.name);
+
+      if (!name || !className || !goal || subjects.length === 0) {
+        alert("Please fill in all fields!");
+        return;
+      }
+
+      let totalStudyHours = parseFloat(prompt("Enter total available study hours (e.g. 6):", "6"));
+      if (isNaN(totalStudyHours) || totalStudyHours <= 0) totalStudyHours = 6;
+
+      const aiDistribution = generateAIStudyPlan(subjects, totalStudyHours);
+      const area = document.getElementById("scheduleArea");
+      area.innerHTML = `<h3>📅 AI-Generated Schedule for ${name}</h3>
+                        <table><thead><tr><th>Time</th><th>Subject / Break</th><th>Status</th></tr></thead><tbody></tbody></table>`;
+      const tbody = area.querySelector("tbody");
+
+      aiDistribution.forEach(slot => {
+        const row = document.createElement("tr");
+        if (slot.subject === "Break") {
+          row.innerHTML = `<td>${slot.time}</td><td style="color:#06b6d4;font-weight:600;">☕ ${slot.subject}</td><td>-</td>`;
+        } else {
+          row.innerHTML = `<td>${slot.time}</td>
+                           <td>${slot.subject}</td>
+                           <td><button class="btn" style="background:#06b6d4;width:auto;padding:5px 15px;" onclick="markComplete(this)">Mark Complete</button></td>`;
+        }
+        tbody.appendChild(row);
+      });
+
+      totalSessions = aiDistribution.filter(s => s.subject !== "Break").length;
+      completedSessions = 0;
+      updateProgress();
+      renderChart();
+      document.getElementById("progressContainer").style.display = "block";
+      document.getElementById("chartContainer").style.display = "block";
+      startMotivationTimer();
+    }
+
+    function generateAIStudyPlan(subjects, totalHours) {
+      const totalPriority = subjects.reduce((sum, s) => sum + s.priority, 0);
+      const slots = [];
+      let currentTime = 9;
+      let minutes = 0;
+
+      subjects.forEach((sub, idx) => {
+        const subHours = (sub.priority / totalPriority) * totalHours;
+        const duration = Math.round(subHours * 60);
+        const start = formatTime(currentTime, minutes);
+        minutes += duration;
+        while (minutes >= 60) { currentTime++; minutes -= 60; }
+        const end = formatTime(currentTime, minutes);
+        slots.push({ subject: sub.name, time: `${start} - ${end}` });
+
+        if ((idx + 1) % 2 === 0 && idx < subjects.length - 1) {
+          const breakStart = formatTime(currentTime, minutes);
+          minutes += 10;
+          while (minutes >= 60) { currentTime++; minutes -= 60; }
+          const breakEnd = formatTime(currentTime, minutes);
+          slots.push({ subject: "Break", time: `${breakStart} - ${breakEnd}` });
+        }
+      });
+      return slots;
+    }
+
+    function formatTime(hour, minutes) {
+      const suffix = hour >= 12 ? "PM" : "AM";
+      const adjHour = hour > 12 ? hour - 12 : hour;
+      const mm = minutes.toString().padStart(2, "0");
+      return `${adjHour}:${mm} ${suffix}`;
+    }
+
+    function markComplete(btn) {
+      btn.parentElement.innerHTML = "<span style='color:var(--success);font-weight:600;'>✅ Done</span>";
+      completedSessions++;
+      updateProgress();
+      if (completedSessions === totalSessions)
+        showMotivation("🎉 You completed all sessions! Great work!");
+    }
+
+    function updateProgress() {
+      const percent = Math.round((completedSessions / totalSessions) * 100);
+      document.getElementById("progressBar").style.width = percent + "%";
+      document.getElementById("progressText").innerText = `${percent}% Completed`;
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('studyChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: subjects.map(s => s.name),
+          datasets: [{
+            data: subjects.map(s => s.priority),
+            backgroundColor: ["#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#3b82f6"],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { color: '#e6eef8' } } }
+        }
+      });
+    }
+
+    function startMotivationTimer() {
+      setTimeout(() => {
+        const quotes = [
+          "💪 Keep pushing forward!",
+          "🔥 You're improving every minute!",
+          "🚀 Stay focused, success is near!",
+          "🌟 Progress over perfection!"
+        ];
+        showMotivation(quotes[Math.floor(Math.random() * quotes.length)]);
+      }, 3600000);
+    }
+
+    function showMotivation(message) {
+      document.getElementById("quoteText").innerText = message;
+      document.getElementById("motivationalPopup").style.display = "block";
+    }
+
+    function closePopup() {
+      document.getElementById("motivationalPopup").style.display = "none";
+    }
+
+    let lastActivityTime = Date.now();
+    document.addEventListener("mousemove", updateActivity);
+    document.addEventListener("keydown", updateActivity);
+    document.addEventListener("click", updateActivity);
+    function updateActivity() { lastActivityTime = Date.now(); }
+
+    setInterval(() => {
+      const idleTime = (Date.now() - lastActivityTime) / 1000;
+      if (idleTime > 180) { triggerMindRefresh(); lastActivityTime = Date.now(); }
+    }, 10000);
+
+    function triggerMindRefresh() {
+      const activities = [showEmojiBurst, showMotivationalQuote, showMiniGame];
+      const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+      randomActivity();
+    }
+
+    function showEmojiBurst() {
+      const emojis = ["😄","🌈","🚀","🎯","🔥","⭐","🎉","💪"];
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.top = "0";
+      container.style.left = "0";
+      container.style.width = "100%";
+      container.style.height = "100%";
+      container.style.pointerEvents = "none";
+      container.style.zIndex = "9999";
+      for (let i=0;i<20;i++){
+        const emoji=document.createElement("span");
+        emoji.innerText=emojis[Math.floor(Math.random()*emojis.length)];
+        emoji.style.position="absolute";
+        emoji.style.left=Math.random()*100+"%";
+        emoji.style.top="100%";
+        emoji.style.fontSize=Math.random()*40+20+"px";
+        emoji.style.transition="all 3s ease-out";
+        container.appendChild(emoji);
+        setTimeout(()=>{emoji.style.top=Math.random()*50+"%";emoji.style.opacity=0;},100);
+      }
+      document.body.appendChild(container);
+      setTimeout(()=>document.body.removeChild(container),3500);
+    }
+
+    function showMotivationalQuote() {
+      const quotes=["🌻 Take a deep breath — your mind deserves a pause!",
+                    "💫 Great things take time. Keep going, champ!",
+                    "🧘 Relax, smile, and reset your focus!",
+                    "🌈 Every small break recharges your big dreams!"];
+      alert(quotes[Math.floor(Math.random()*quotes.length)]);
+    }
+
+    function showMiniGame() {
+      const popup=document.createElement("div");
+      popup.id="miniGamePopup";
+      popup.style.position="fixed";
+      popup.style.top="50%";
+      popup.style.left="50%";
+      popup.style.transform="translate(-50%,-50%)";
+      popup.style.background="#1e293b";
+      popup.style.padding="25px";
+      popup.style.borderRadius="20px";
+      popup.style.boxShadow="0 0 20px rgba(0,0,0,0.4)";
+      popup.style.color="#e2e8f0";
+      popup.style.textAlign="center";
+      popup.style.zIndex="9999";
+      popup.innerHTML=`
+        <h3>🎯 Quick Reaction Game!</h3>
+        <p>Click the 🧠 emoji as fast as you can!</p>
+        <button id="emojiButton" style="font-size:30px;margin:10px;">🧠</button>
+        <p id="result" style="font-weight:600;margin-top:10px;"></p>
+        <button onclick="document.body.removeChild(document.getElementById('miniGamePopup'))" style="background:#06b6d4;padding:5px 10px;border:none;border-radius:5px;color:#fff;">Close</button>`;
+      document.body.appendChild(popup);
+      const btn=popup.querySelector("#emojiButton");
+      const result=popup.querySelector("#result");
+      let startTime=Date.now();
+      btn.addEventListener("click",()=>{
+        const reaction=((Date.now()-startTime)/1000).toFixed(2);
+        result.innerText=`⚡ Your reaction time: ${reaction}s`;
+        btn.disabled=true;
+      });
+    }
+  </script>
+</body>
+</html>

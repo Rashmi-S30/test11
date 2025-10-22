@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini AI Summarizer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      width: 420px;
+      border-radius: 15px;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.3);
+      padding: 25px;
+      text-align: center;
+      transition: all 0.3s ease-in-out;
+      position: relative;
+      overflow: hidden;
+    }
+    h2 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      resize: none;
+      font-size: 14px;
+      outline: none;
+    }
+    button {
+      background: #2575fc;
+      color: white;
+      border: none;
+      padding: 10px 25px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 15px;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #1b5ddb;
+    }
+    .popup {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: white;
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.4s;
+    }
+    .popup.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .popup p {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .output {
+      margin-top: 20px;
+      background: #f1f5ff;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: left;
+      font-size: 14px;
+      color: #222;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2> AI Text Summarizer</h2>
+    <textarea id="inputText" placeholder="Paste your text here..."></textarea>
+    <br>
+    <button onclick="summarize()">Summarize</button>
+    <div id="output" class="output"></div>
+
+    <!-- Popup Animation -->
+    <div class="popup" id="popup">
+      <div class="spinner"></div>
+      <p id="popupText">Processing your text...</p>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = "AIzaSyDtmIFtRq-eeG8hIhUiWdju5PbqVLA7xRo"; // Your Gemini API key
+    const MODEL = "gemini-2.5-flash";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+
+    async function summarize() {
+      const inputText = document.getElementById("inputText").value.trim();
+      const outputDiv = document.getElementById("output");
+      const popup = document.getElementById("popup");
+      const popupText = document.getElementById("popupText");
+
+      if (!inputText) {
+        outputDiv.innerHTML = "<b>Please enter some text!</b>";
+        return;
+      }
+
+      popup.classList.add("active");
+      popupText.textContent = "Analyzing text with Gemini AI...";
+
+      try {
+        const requestBody = {
+          contents: [{
+            parts: [{
+              text: `Summarize this text in 3 lines in simple language:\n${inputText}`
+            }]
+          }]
+        };
+
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        popupText.textContent = "Generating summary...";
+
+        setTimeout(() => {
+          popup.classList.remove("active");
+          if (data.candidates && data.candidates.length > 0) {
+            const summary = data.candidates[0].content.parts[0].text;
+            outputDiv.innerHTML = `<b>Summary:</b><br>${summary}`;
+          } else {
+            outputDiv.innerHTML = "<b>Error:</b> No response from Gemini model!";
+          }
+        }, 1500);
+      } catch (error) {
+        popup.classList.remove("active");
+        outputDiv.innerHTML = "<b>Error:</b> Something went wrong!";
+        console.error(error);
+      }
+    }
+  </script>
+
+</body>
+</html>
