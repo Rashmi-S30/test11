@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartStudy AI — Teacher Dashboard + Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
+body{background:#f5f7fa;color:#222;overflow-x:hidden;}
+header{background:#111;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:18px 40px;position:fixed;width:100%;top:0;z-index:1000;}
+header h1{font-size:1.4em;font-weight:700;}
+nav ul{list-style:none;display:flex;gap:20px;}
+nav ul li a{color:#fff;text-decoration:none;font-weight:500;transition:.2s;cursor:pointer;}
+nav ul li a:hover{color:#00c6ff;}
+main{margin-top:90px;padding:30px 40px;}
+h2.section-title{font-size:1.9em;margin-bottom:14px;color:#0072ff;text-align:center;font-weight:700;}
+.teacher-dashboard{display:grid;grid-template-columns:250px 1fr;gap:24px;}
+.sidebar{background:#0b0c10;color:#fff;padding:20px;border-radius:12px;height:calc(100vh - 150px);position:sticky;top:90px;}
+.sidebar h3{font-size:1.1em;margin-bottom:14px;color:#00c6ff;text-align:center;}
+.sidebar ul{list-style:none;padding:0;}
+.sidebar ul li{margin:10px 0;}
+.sidebar ul li a{color:#cbd5e1;text-decoration:none;display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;cursor:pointer;}
+.sidebar ul li a:hover{background:#0072ff;color:#fff;}
+.content{background:#fff;border-radius:12px;padding:20px;box-shadow:0 10px 25px rgba(0,0,0,0.08);min-height:500px;}
+.student-table{width:100%;border-collapse:collapse;text-align:left;margin-top:10px;}
+.student-table th,.student-table td{padding:12px 10px;border-bottom:1px solid #eef2ff;vertical-align:middle;}
+.student-table th{background:#0072ff;color:#fff;position:sticky;top:0;z-index:1;}
+.student-table tr:hover{background:#f8fbff;}
+.status{font-weight:700;padding:6px 10px;border-radius:18px;color:#fff;display:inline-block;}
+.status.online{background:#28a745;animation:blink 1s infinite;}
+.status.offline{background:#dc3545;}
+.status.blocked{background:#6b7280;}
+@keyframes blink {0%,50%,100%{opacity:1;}25%,75%{opacity:0.4;}}
+.action-btn{border:none;border-radius:6px;padding:6px 10px;cursor:pointer;color:#fff;font-size:0.9em;margin-right:6px;}
+.notify-btn{background:#00c6ff;}
+.feedback-btn{background:#16a34a;}
+.block-btn{background:#ef4444;}
+.footer{margin-top:20px;text-align:center;padding:18px;color:#777;}
+.analytics-section{background:#0b0b0f;color:#ffffff;padding:20px;border-radius:12px;text-align:center;}
+.analytics-section h2{color:#00ffff;margin-bottom:10px;}
+.student-selector{margin:20px 0;}
+select{padding:8px;border-radius:8px;border:none;outline:none;background:#1f1f2f;color:white;font-size:16px;}
+.charts{display:flex;flex-wrap:wrap;justify-content:space-around;}
+.chart-container{width:45%;background:#141422;padding:15px;border-radius:15px;margin:10px;box-shadow:0 0 10px #00ffff50;}
+.table-section{margin-top:30px;}
+.table-section table{width:100%;border-collapse:collapse;background:#141422;border-radius:10px;overflow:hidden;}
+.table-section th,.table-section td{padding:12px;border-bottom:1px solid #00ffff33;}
+.table-section th{background:#1f1f2f;color:#00ffff;}
+@media (max-width:768px){.chart-container{width:90%;}}
+#notes-section h3{color:#0072ff;margin-bottom:10px;}
+#noteInput{width:100%;height:80px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:10px;resize:none;}
+#sendNoteBtn{background:#0072ff;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:600;}
+#notesList{margin-top:15px;list-style:none;padding:0;}
+#notesList li{background:#f0f7ff;border-left:4px solid #0072ff;margin-bottom:8px;padding:10px;border-radius:6px;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>SmartStudy AI — Teacher Panel</h1>
+<nav>
+<ul>
+<li><a onclick="showSection('students')">Students</a></li>
+<li><a onclick="showSection('activity')">Activity</a></li>
+<li><a onclick="showSection('notifications')">Notifications</a></li>
+<li><a onclick="showSection('analytics')">Analytics</a></li>
+<li><a onclick="showSection('notes')">Notes</a></li>
+</ul>
+</nav>
+</header>
+
+<main>
+<h2 class="section-title">Teacher Dashboard</h2>
+
+<div class="teacher-dashboard">
+  <div class="sidebar">
+    <h3>Menu</h3>
+    <ul>
+      <li><a onclick="showSection('students')"><i class="fa-solid fa-users"></i> All Students</a></li>
+      <li><a onclick="showSection('activity')"><i class="fa-solid fa-chart-line"></i> Activity Monitor</a></li>
+      <li><a onclick="showSection('notifications')"><i class="fa-solid fa-bell"></i> Notifications</a></li>
+      <li><a onclick="showSection('analytics')"><i class="fa-solid fa-chart-pie"></i> Analytics</a></li>
+      <li><a onclick="showSection('notes')"><i class="fa-solid fa-note-sticky"></i> Notes</a></li>
+    </ul>
+  </div>
+
+  <div class="content">
+    <div id="students-section">
+      <h3>All Students Overview</h3>
+      <table class="student-table">
+        <thead>
+          <tr><th>ID</th><th>Name</th><th>Subject</th><th>Progress</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody id="studentTableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="activity-section" style="display:none;">
+      <h3>Activity Monitor</h3>
+      <ul id="activityLog"></ul>
+    </div>
+
+    <div id="notifications-section" style="display:none;">
+      <h3>Notifications</h3>
+      <ul id="notificationsLog"></ul>
+    </div>
+
+    <div id="analytics-section" style="display:none;">
+      <div class="analytics-section">
+        <h2>📊 AI Learning Activity Analytics</h2>
+        <p>Track student engagement across AI learning tools</p>
+        <div class="student-selector">
+          <label for="studentSelect">Select Student:</label>
+          <select id="studentSelect"></select>
+        </div>
+
+        <div class="charts">
+          <div class="chart-container"><canvas id="barChart"></canvas></div>
+          <div class="chart-container"><canvas id="pieChart"></canvas></div>
+        </div>
+
+        <div class="table-section">
+          <h3>🧾 Activity Log</h3>
+          <table id="activityTable">
+            <thead>
+              <tr><th>Date</th><th>Activity</th><th>Time Spent (min)</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="notes-section" style="display:none;">
+      <h3>📘 Send Notes to Students</h3>
+      <textarea id="noteInput" placeholder="Write your note here..."></textarea><br>
+      <button id="sendNoteBtn" onclick="sendNote()">Send Note</button>
+      <h4 style="margin-top:15px;">🗂 Sent Notes</h4>
+      <ul id="notesList"></ul>
+    </div>
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+&copy; 2025 SmartStudy AI — Teacher Dashboard & Analytics
+</footer>
+
+<script>
+const STORAGE_KEY='students';
+const ACTIVITY_KEY='activity';
+const NOTIFY_KEY='notifications';
+const NOTES_KEY='teacher_notes';
+
+function readData(key){return JSON.parse(localStorage.getItem(key)||'[]');}
+function writeData(key,val){localStorage.setItem(key,JSON.stringify(val));}
+
+// Default students
+if(!readData(STORAGE_KEY).length){
+  writeData(STORAGE_KEY,[
+    {id:'ST101',name:'Priya Sharma',subject:'Math',progress:0,status:'Offline'},
+    {id:'ST102',name:'Rahul Verma',subject:'Science',progress:0,status:'Offline'},
+    {id:'ST103',name:'Riya Sen',subject:'English',progress:0,status:'Offline'},
+    {id:'ST104',name:'Aarav Sharma',subject:'Computer',progress:0,status:'Offline'},
+    {id:'ST105',name:'Neha Patel',subject:'History',progress:0,status:'Offline'},
+    {id:'ST106',name:'Karan Mehta',subject:'Physics',progress:0,status:'Offline'}
+  ]);
+}
+
+function renderStudents(){
+  const tbody=document.getElementById('studentTableBody');
+  tbody.innerHTML='';
+  readData(STORAGE_KEY).forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${s.id}</td>
+      <td>${s.name}</td>
+      <td>${s.subject}</td>
+      <td>${s.progress}%</td>
+      <td><span class="status ${s.status.toLowerCase()}">${s.status}</span></td>
+      <td>
+        <button class="action-btn notify-btn" onclick="notifyStudent('${s.name}')">Notify</button>
+        <button class="action-btn feedback-btn" onclick="feedbackStudent('${s.name}')">Feedback</button>
+        <button class="action-btn block-btn" onclick="blockStudent('${s.name}')">${s.status==='Blocked'?'Unblock':'Block'}</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderActivity(){
+  const ul=document.getElementById('activityLog');
+  ul.innerHTML='';
+  readData(ACTIVITY_KEY).forEach(a=>{
+    const li=document.createElement('li'); 
+    li.textContent=a; 
+    ul.appendChild(li);
+  });
+}
+function renderNotifications(){
+  const ul=document.getElementById('notificationsLog');
+  ul.innerHTML='';
+  readData(NOTIFY_KEY).forEach(n=>{
+    const li=document.createElement('li'); 
+    li.textContent=n; 
+    ul.appendChild(li);
+  });
+}
+
+function notifyStudent(name){
+  const message = prompt(`Enter notification message for ${name}:`);
+  if(!message) return alert("❌ Notification cancelled!");
+  const log=readData(NOTIFY_KEY);
+  const fullMsg=`📢 Notification to ${name}: "${message}" at ${new Date().toLocaleTimeString()}`;
+  log.unshift(fullMsg);
+  writeData(NOTIFY_KEY,log); 
+  renderNotifications();
+  alert("✅ Notification sent successfully!");
+}
+
+function feedbackStudent(name){
+  const fb=prompt(`Enter feedback for ${name}:`);
+  if(fb){
+    const log=readData(ACTIVITY_KEY);
+    log.unshift(`📝 Feedback for ${name}: "${fb}" at ${new Date().toLocaleTimeString()}`);
+    writeData(ACTIVITY_KEY,log); 
+    renderActivity();
+    alert("✅ Feedback recorded!");
+  }
+}
+
+function blockStudent(name){
+  let students=readData(STORAGE_KEY);
+  const s=students.find(x=>x.name===name);
+  if(!s)return;
+  s.status=(s.status==='Blocked')?'Offline':'Blocked';
+  writeData(STORAGE_KEY,students);
+  const log=readData(ACTIVITY_KEY);
+  log.unshift(`⚙ ${name} is now ${s.status} at ${new Date().toLocaleTimeString()}`);
+  writeData(ACTIVITY_KEY,log); 
+  renderActivity(); 
+  renderStudents();
+}
+
+function showSection(section){
+  ['students','activity','notifications','analytics','notes'].forEach(id=>{
+    document.getElementById(id+'-section').style.display='none';
+  });
+  document.getElementById(section+'-section').style.display='block';
+}
+
+function renderNotes(){
+  const ul=document.getElementById('notesList'); ul.innerHTML='';
+  readData(NOTES_KEY).forEach(note=>{
+    const li=document.createElement('li');
+    li.textContent=`${note.text} — (${note.time})`; 
+    ul.appendChild(li);
+  });
+}
+function sendNote(){
+  const text=document.getElementById('noteInput').value.trim();
+  if(!text)return alert("Please enter a note before sending!");
+  const notes=readData(NOTES_KEY);
+  notes.unshift({text,time:new Date().toLocaleString()});
+  writeData(NOTES_KEY,notes); 
+  document.getElementById('noteInput').value='';
+  renderNotes(); 
+  alert("✅ Note sent successfully!");
+}
+
+setInterval(()=>{
+  let students=readData(STORAGE_KEY);
+  students.forEach(s=>{
+    if(s.status==='Blocked')return;
+    if(Math.random()<0.3)s.status=(s.status==='Offline')?'Online':'Offline';
+    if(s.status==='Online'&&s.progress<100)s.progress+=Math.floor(Math.random()*5)+1;
+    if(s.progress>100)s.progress=100;
+  });
+  writeData(STORAGE_KEY,students); 
+  renderStudents();
+},3000);
+
+renderStudents(); renderActivity(); renderNotifications(); renderNotes();
+
+const sampleData=[
+  {student_id:"S101",name:"Aarav Sharma",activity:"AI Chat Bot",time_spent_minutes:25,date:"2025-10-20"},
+  {student_id:"S101",name:"Aarav Sharma",activity:"AI Quiz",time_spent_minutes:15,date:"2025-10-20"},
+  {student_id:"S101",name:"Aarav Sharma",activity:"AI Video",time_spent_minutes:30,date:"2025-10-21"},
+  {student_id:"S101",name:"Aarav Sharma",activity:"Speech to Text",time_spent_minutes:20,date:"2025-10-21"},
+  {student_id:"S101",name:"Aarav Sharma",activity:"AI Summarize",time_spent_minutes:10,date:"2025-10-21"},
+
+  {student_id:"S102",name:"Neha Patel",activity:"AI Chat Bot",time_spent_minutes:35,date:"2025-10-20"},
+  {student_id:"S102",name:"Neha Patel",activity:"AI Quiz",time_spent_minutes:10,date:"2025-10-20"},
+  {student_id:"S102",name:"Neha Patel",activity:"Speech to Text",time_spent_minutes:25,date:"2025-10-21"},
+  {student_id:"S102",name:"Neha Patel",activity:"AI Summarize",time_spent_minutes:15,date:"2025-10-21"},
+
+  {student_id:"S103",name:"Priya Sharma",activity:"AI Quiz",time_spent_minutes:20,date:"2025-10-20"},
+  {student_id:"S103",name:"Priya Sharma",activity:"AI Chat Bot",time_spent_minutes:30,date:"2025-10-21"},
+  {student_id:"S103",name:"Priya Sharma",activity:"AI Video",time_spent_minutes:25,date:"2025-10-21"},
+  {student_id:"S103",name:"Priya Sharma",activity:"AI Summarize",time_spent_minutes:12,date:"2025-10-21"},
+
+  {student_id:"S104",name:"Rahul Verma",activity:"AI Chat Bot",time_spent_minutes:18,date:"2025-10-20"},
+  {student_id:"S104",name:"Rahul Verma",activity:"AI Quiz",time_spent_minutes:22,date:"2025-10-20"},
+  {student_id:"S104",name:"Rahul Verma",activity:"AI Video",time_spent_minutes:35,date:"2025-10-21"},
+  {student_id:"S104",name:"Rahul Verma",activity:"Speech to Text",time_spent_minutes:28,date:"2025-10-21"},
+
+  {student_id:"S105",name:"Riya Sen",activity:"AI Chat Bot",time_spent_minutes:20,date:"2025-10-20"},
+  {student_id:"S105",name:"Riya Sen",activity:"AI Quiz",time_spent_minutes:12,date:"2025-10-20"},
+  {student_id:"S105",name:"Riya Sen",activity:"AI Video",time_spent_minutes:30,date:"2025-10-21"},
+  {student_id:"S105",name:"Riya Sen",activity:"Speech to Text",time_spent_minutes:18,date:"2025-10-21"},
+
+  {student_id:"S106",name:"Karan Mehta",activity:"AI Quiz",time_spent_minutes:40,date:"2025-10-20"},
+  {student_id:"S106",name:"Karan Mehta",activity:"AI Chat Bot",time_spent_minutes:22,date:"2025-10-20"},
+  {student_id:"S106",name:"Karan Mehta",activity:"Speech to Text",time_spent_minutes:28,date:"2025-10-21"},
+  {student_id:"S106",name:"Karan Mehta",activity:"AI Summarize",time_spent_minutes:14,date:"2025-10-21"}
+];
+
+function loadDashboard(){
+  const data=sampleData;
+  const students=[...new Set(data.map(d=>d.name))];
+  const sel=document.getElementById("studentSelect");
+  sel.innerHTML="";
+  students.forEach(name=>{
+    const opt=document.createElement("option");
+    opt.value=name; opt.textContent=name; sel.appendChild(opt);
+  });
+  sel.addEventListener("change",()=>updateDashboard(data,sel.value));
+  updateDashboard(data,students[0]);
+}
+
+function updateDashboard(data,name){
+  const d=data.filter(x=>x.name===name);
+  const activities=["AI Chat Bot","AI Quiz","AI Video","Speech to Text","AI Summarize"];
+  const timeSpent=activities.map(a=>{
+    const f=d.filter(x=>x.activity===a);
+    return f.reduce((s,c)=>s+c.time_spent_minutes,0);
+  });
+  const tbody=document.querySelector("#activityTable tbody");
+  tbody.innerHTML="";
+  d.forEach(e=>tbody.innerHTML+=`<tr><td>${e.date}</td><td>${e.activity}</td><td>${e.time_spent_minutes}</td></tr>`);
+  if(window.barChartInstance)window.barChartInstance.destroy();
+  if(window.pieChartInstance)window.pieChartInstance.destroy();
+  const bar=document.getElementById("barChart").getContext("2d");
+  window.barChartInstance=new Chart(bar,{
+    type:"bar",
+    data:{labels:activities,datasets:[{label:"Time Spent (min)",data:timeSpent,backgroundColor:"#00ffff88",borderColor:"#00ffff",borderWidth:1}]},
+    options:{scales:{y:{beginAtZero:true}},plugins:{legend:{display:false}}}
+  });
+  const pie=document.getElementById("pieChart").getContext("2d");
+  window.pieChartInstance=new Chart(pie,{
+    type:"pie",
+    data:{labels:activities,datasets:[{data:timeSpent,backgroundColor:["#00ffff","#00ccff","#0066ff","#33ccff","#0099cc"]}]}
+  });
+}
+loadDashboard();
+</script>
+</body>
+</html>

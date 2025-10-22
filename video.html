@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Video Finder — SmartStudy AI</title>
+<style>
+body {
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #0a0b10, #141727);
+  color: #fff;
+  text-align: center;
+  min-height: 100vh;
+}
+header {
+  padding: 30px;
+  background: linear-gradient(135deg, #0066ff, #00c6ff);
+  color: white;
+  font-size: 1.8em; 
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.search-container {
+  margin: 30px auto;
+  max-width: 700px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+}
+input {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+}
+button {
+  padding: 12px 20px;
+  border: none;
+  background: #00c6ff;
+  color: #fff;
+  font-size: 1em;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover {
+  background: #0084ff;
+  transform: scale(1.05);
+}
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 30px;
+  max-width: 1200px;
+  margin: auto;
+}
+.video-card {
+  background: #1e2230;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  transition: 0.3s;
+  cursor: pointer;
+}
+.video-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 25px rgba(0, 198, 255, 0.5);
+}
+.video-card img {
+  width: 100%;
+  border-radius: 10px;
+}
+.video-title {
+  margin: 10px 0;
+  font-size: 1em;
+  color: #ddd;
+}
+/* Modal Player */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  position: relative;
+  width: 90%;
+  max-width: 800px;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.modal-content iframe {
+  width: 100%;
+  height: 450px;
+}
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+h2.section-title {
+  margin-top: 40px;
+  color: #00c6ff;
+  text-shadow: 0 0 10px #007bff;
+}
+/* History Styles */
+.history-item {
+  background: #1e2230;
+  padding: 10px 15px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.history-item span {
+  color: #ccc;
+  cursor: pointer;
+}
+.history-item button {
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<header>🎥 AI Video Finder — SmartStudy AI</header>
+
+<div class="search-container">
+  <input type="text" id="searchQuery" placeholder="Search for videos...">
+  <button onclick="searchVideos()">Search</button>
+  <button onclick="resetHome()" style="background:#ffaa00;">Home</button>
+</div>
+
+<h2 class="section-title">📺 All Videos</h2>
+<div id="allVideosGrid" class="video-grid"></div>
+
+<h2 class="section-title">🕘 Search History</h2>
+<div id="historyPage" class="video-grid"></div>
+<button onclick="clearHistory()" style="background:#ff4d4d; color:white; padding:10px 15px; border:none; border-radius:8px; margin-bottom:30px;">Clear All History</button>
+
+<!-- Video Modal -->
+<div id="videoModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">&times;</span>
+    <iframe id="videoPlayer" src="" frameborder="0" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+// Video Database
+const videosDB = [
+  { id: "zOjov-2OZ0E", title: "C++ Full Course", tags: ["C++","programming","course"] },
+  { id: "Eo-KmOd3i7s", title: "Java + DSA Course", tags: ["Java","DSA","course"] },
+  { id: "s3Tkd6YcLxU", title: "Web Development Full Course", tags: ["web","development","course"] },
+  { id: "UupGhHgjxko", title: "Python in One Shot", tags: ["Python","course"] },
+  { id: "1Rs2ND1ryYc", title: "SQL Full Course", tags: ["SQL","database","course"] },
+  { id: "dQw4w9WgXcQ", title: "Never Gonna Give You Up 🎵", tags: ["comedy","fun"] },
+  { id: "yG3E0XTRKxk", title: "Funny Dogs Compilation 🐶", tags: ["comedy","fun"] },
+  { id: "2Z4m4lnjxkY", title: "Prank Gone Wrong 😂", tags: ["comedy","fun"] },
+  { id: "l482T0yNkeo", title: "Stand Up Comedy Clip", tags: ["comedy","fun"] },
+  { id: "J---aiyznGQ", title: "Charlie bit my finger 😂", tags: ["cartoon","fun"] },
+  { id: "hY7m5jjJ9mM", title: "Cute Cat Compilation 🐱", tags: ["cartoon","fun"] },
+  { id: "VYOjWnS4cMY", title: "Epic Rap Battles of History", tags: ["cartoon","fun"] },
+  { id: "tVj0ZTS4WF4", title: "Best Fails Compilation 😂", tags: ["cartoon","fun"] },
+  { id: "bEsKjhXZx18", title: "AI Learning Explained in 5 Minutes", tags: ["AI","learning"] },
+  { id: "Uu3IySgG11Y", title: "Top 10 AI Tools for Students", tags: ["AI","tools","students"] },
+  { id: "iO9cR7aC3uY", title: "How AI Changes Education Forever", tags: ["AI","education"] },
+  { id: "BBJa32lCaaY", title: "Machine Learning Crash Course", tags: ["AI","ML"] }
+];
+
+const searchInput = document.getElementById("searchQuery");
+let searchHistory = JSON.parse(localStorage.getItem("videoSearchHistory")) || [];
+
+function renderVideos(videos, container) {
+  container.innerHTML = "";
+  if(videos.length===0) {
+    container.innerHTML = "<p>❌ No videos found!</p>";
+    return;
+  }
+  videos.forEach(video => {
+    const card = document.createElement("div");
+    card.className = "video-card";
+    card.innerHTML = `
+      <img src="https://img.youtube.com/vi/${video.id}/hqdefault.jpg" alt="${video.title}">
+      <div class="video-title">${video.title}</div>
+    `;
+    card.onclick = () => openModal(video.id);
+    container.appendChild(card);
+  });
+}
+
+function loadHome() {
+  renderVideos(videosDB, document.getElementById("allVideosGrid"));
+  renderHistory();
+}
+
+function searchVideos() {
+  const query = searchInput.value.trim().toLowerCase();
+  if(!query) return alert("Please enter a search term!");
+  saveHistory(query);
+
+  const results = videosDB.filter(v => {
+    const title = v.title.toLowerCase();
+    const tags = v.tags.map(tag => tag.toLowerCase());
+    return title.includes(query) || tags.some(tag => tag.includes(query));
+  });
+
+  renderVideos(results, document.getElementById("allVideosGrid"));
+  renderHistory();
+  searchInput.focus();
+}
+
+function saveHistory(query) {
+  if(!searchHistory.includes(query)) {
+    searchHistory.unshift(query);
+    if(searchHistory.length > 20) searchHistory.pop();
+    localStorage.setItem("videoSearchHistory", JSON.stringify(searchHistory));
+  }
+}
+
+function renderHistory() {
+  const historyContainer = document.getElementById("historyPage");
+  if(searchHistory.length === 0) {
+      historyContainer.innerHTML = "<p>No search history yet.</p>";
+      return;
+  }
+  historyContainer.innerHTML = searchHistory.map((item,index)=>`
+    <div class="history-item">
+      <span onclick="searchFromHistory('${item}')">${item}</span>
+      <button onclick="deleteHistoryItem(${index})">Delete</button>
+    </div>
+  `).join("");
+}
+
+function searchFromHistory(query){
+  searchInput.value = query;
+  searchVideos();
+}
+
+function deleteHistoryItem(index){
+  searchHistory.splice(index,1);
+  localStorage.setItem("videoSearchHistory", JSON.stringify(searchHistory));
+  renderHistory();
+}
+
+function clearHistory(){
+  searchHistory = [];
+  localStorage.removeItem("videoSearchHistory");
+  renderHistory();
+}
+
+function openModal(videoId) {
+  const modal = document.getElementById("videoModal");
+  const player = document.getElementById("videoPlayer");
+  player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  modal.style.display = "flex";
+}
+
+function closeModal() {
+  const modal = document.getElementById("videoModal");
+  const player = document.getElementById("videoPlayer");
+  modal.style.display = "none";
+  player.src = "";
+}
+
+function resetHome(){
+  searchInput.value = "";
+  loadHome();
+}
+
+window.onclick = e => { if(e.target===document.getElementById("videoModal")) closeModal(); }
+
+loadHome();
+</script>
+
+</body>
+</html>

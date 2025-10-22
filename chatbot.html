@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gemini Chat App</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      background-color: #0d1117;
+      color: #e6edf3;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.light-theme { background-color: #f2f5f9; color: #222; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      background-color: #0078d7; padding: 12px 20px; color: white;
+    }
+    header button {
+      background: transparent; border: none; color: white; font-size: 22px; cursor: pointer;
+    }
+    .container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .chats-container {
+      flex: 1; overflow-y: auto; padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+      scroll-behavior: smooth;
+    }
+    .message {
+      max-width: 75%; padding: 10px 14px; border-radius: 12px;
+      line-height: 1.4; display: flex; align-items: flex-start; gap: 10px;
+    }
+    .user-message { align-self: flex-end; background-color: #0078d7; color: white; border-bottom-right-radius: 2px; }
+    .bot-message { align-self: flex-start; background-color: #1f2937; color: #e6edf3; border-bottom-left-radius: 2px; }
+    body.light-theme .bot-message { background-color: #e3e7eb; color: #111; }
+    .bot-message.loading .message-text::after { content: "⏳"; animation: dots 1s infinite; }
+    @keyframes dots { 0% { content: "⏳"; } 50% { content: "⏳."; } 100% { content: "⏳.."; } }
+    .message img.avatar { width: 28px; height: 28px; border-radius: 50%; }
+    .prompt-form {
+      display: flex; padding: 10px; border-top: 1px solid #444; background-color: #161b22;
+    }
+    body.light-theme .prompt-form { background-color: #fff; border-top: 1px solid #ccc; }
+    .prompt-input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+    .prompt-form button { margin-left: 8px; background: #0078d7; border: none; color: white; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    .prompt-form button:hover { background: #005fa3; }
+    #delete-chats-btn, #stop-prompt-btn { background: #ff4d4f; margin-left: 6px; }
+    #delete-chats-btn:hover, #stop-prompt-btn:hover { background: #e03e3f; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>💬 Ai Smart Nova</div>
+    <button id="theme-toggle-btn">light_mode</button>
+  </header>
+
+  <div class="container">
+    <div class="chats-container"></div>
+    <form class="prompt-form">
+      <input class="prompt-input" type="text" placeholder="Type your message..." />
+      <button type="submit">Send</button>
+      <button type="button" id="stop-prompt-btn">Stop</button>
+      <button type="button" id="delete-chats-btn">Delete</button>
+    </form>
+  </div>
+
+  <script>
+    const container = document.querySelector(".container");
+    const chatsContainer = document.querySelector(".chats-container");
+    const promptForm = document.querySelector(".prompt-form");
+    const promptInput = promptForm.querySelector(".prompt-input");
+    const themeToggle = document.querySelector("#theme-toggle-btn");
+
+    // ✅ Correct API setup
+    const API_KEY = "AIzaSyB1n_HQ7OuEcwg3eAg7oeYpKU8Ex49tXOE"; // <-- Your key
+    const MODEL = "gemini-2.5-flash";
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+
+    let userMessage = "";
+    const chatHistory = [];
+
+    const createMsgElement = (content, ...classes) => {
+      const div = document.createElement("div");
+      div.classList.add("message", ...classes);
+      div.innerHTML = content;
+      return div;
+    };
+
+    const scrollToBottom = () => chatsContainer.scrollTo({ top: chatsContainer.scrollHeight, behavior: "smooth" });
+
+    const typingEffect = (text, textElement, botMsgDiv) => {
+      textElement.textContent = "";
+      const words = text.split(" ");
+      let wordIndex = 0;
+      const typingInterval = setInterval(() => {
+        if (wordIndex < words.length) {
+          textElement.textContent += (wordIndex === 0 ? "" : " ") + words[wordIndex++];
+          botMsgDiv.classList.remove("loading");
+          scrollToBottom();
+        } else clearInterval(typingInterval);
+      }, 15);
+    };
+
+    const generateResponse = async (botMsgDiv) => {
+      const textElement = botMsgDiv.querySelector(".message-text");
+      chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: chatHistory }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || "API Error");
+
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "No reply received.";
+        typingEffect(responseText, textElement, botMsgDiv);
+      } catch (error) {
+        console.error(error);
+        textElement.textContent = "❌ Error: " + error.message;
+      }
+    };
+
+    const handleFormSubmit = (e) => {
+      e.preventDefault();
+      userMessage = promptInput.value.trim();
+      if (!userMessage) return;
+      promptInput.value = "";
+
+      document.body.classList.add("chats-active");
+
+      const userMsgHTML = '<p class="message-text"></p>';
+      const userMsgDiv = createMsgElement(userMsgHTML, "user-message");
+      userMsgDiv.querySelector(".message-text").textContent = userMessage;
+      chatsContainer.appendChild(userMsgDiv);
+      scrollToBottom();
+
+      setTimeout(() => {
+         const botMsgHTML = '<img src="image/newaichatimg.jpg" class="avatar"><p class="message-text">Thinking...</p>';
+        // const botMsgHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Google-flutter-logo.svg" class="avatar"><p class="message-text">Thinking...</p>';
+        const botMsgDiv = createMsgElement(botMsgHTML, "bot-message", "loading");
+        chatsContainer.appendChild(botMsgDiv);
+        scrollToBottom();
+        generateResponse(botMsgDiv);
+      }, 600);
+    };
+
+    promptForm.addEventListener("submit", handleFormSubmit);
+
+    themeToggle.addEventListener("click", () => {
+      const isLight = document.body.classList.toggle("light-theme");
+      themeToggle.textContent = isLight ? "dark_mode" : "light_mode";
+    });
+
+    const stopBtn = document.getElementById("stop-prompt-btn");
+    if (stopBtn) stopBtn.addEventListener("click", () => {
+      const loadingMsg = document.querySelector(".bot-message.loading");
+      if (loadingMsg) {
+        loadingMsg.classList.remove("loading");
+        loadingMsg.querySelector(".message-text").textContent = "❌ Response stopped.";
+      }
+    });
+
+    const deleteBtn = document.getElementById("delete-chats-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", () => {
+      chatsContainer.innerHTML = "";
+      document.body.classList.remove("chats-active");
+    });
+  </script>
+</body>
+</html>
